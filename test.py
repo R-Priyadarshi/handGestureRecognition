@@ -1,80 +1,122 @@
+import argparse
+import logging
 import pickle
+import string
+from pathlib import Path
+
 import cv2
 import mediapipe as mp
 import numpy as np
 
-model_dict = pickle.load(open('model.pickle', 'rb'))
-model = model_dict['model']
 
-camera = cv2.VideoCapture(0)
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Run real-time hand gesture inference.")
+    parser.add_argument("--model", default="model.pickle", help="Path to the trained model.")
+    parser.add_argument("--camera-index", type=int, default=0, help="Camera index to use.")
+    parser.add_argument(
+        "--min-detection-confidence",
+        type=float,
+        default=0.3,
+        help="Minimum hand detection confidence.",
+    )
+    parser.add_argument("--max-hands", type=int, default=1, help="Maximum hands to track.")
+    return parser.parse_args()
 
-mp_hands = mp.solutions.hands
-mp_drawing = mp.solutions.drawing_utils
-mp_drawing_styles = mp.solutions.drawing_styles
 
-hands = mp_hands.Hands(static_image_mode=True, min_detection_confidence=0.3)
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    args = parse_args()
+    model_path = Path(args.model)
+    if not model_path.exists():
+        raise FileNotFoundError(f"Model not found: {model_path}")
 
-labels_dict = {0: 'A', 1: 'B', 2: 'C',3:'D',4:'E',5:'F',6:'G',7:'H',8:'I',9:'J',10:'K',11:'L',12:'M',13:'N',14:'O',15:'P',16:'Q',17:'R',18:'S',19:'T',20:'U',21:'V',22:'W',23:'X',24:'Y',25:'Z'}
+    with model_path.open("rb") as file_handle:
+        model_dict = pickle.load(file_handle)
+    model = model_dict.get("model")
+    if model is None:
+        raise ValueError("Model file is missing the trained classifier.")
 
-while True:
+    labels_dict = {index: label for index, label in enumerate(string.ascii_uppercase)}
+
+    camera = cv2.VideoCapture(args.camera_index)
+    if not camera.isOpened():
+        raise RuntimeError(f"Unable to open camera index {args.camera_index}.")
+
+    mp_hands = mp.solutions.hands
+    mp_drawing = mp.solutions.drawing_utils
+    mp_drawing_styles = mp.solutions.drawing_styles
+
     try:
-        relPosLandmarks = []
-        xCoordLandmarks = []
-        yCoordLandmarks = []
+        with mp_hands.Hands(
+            static_image_mode=False,
+            min_detection_confidence=args.min_detection_confidence,
+            max_num_hands=args.max_hands,
+        ) as hands:
+            while True:
+                success, img_from_cam = camera.read()
+                if not success:
+                    logging.warning("Failed to read from camera. Retrying...")
+                    continue
 
-        success, imgFromCam = camera.read()
+                height, width, _ = img_from_cam.shape
+                img_rgb = cv2.cvtColor(img_from_cam, cv2.COLOR_BGR2RGB)
+                results = hands.process(img_rgb)
 
-        H, W, C = imgFromCam.shape
+                predicted_character = "Unknown"
+                if results.multi_hand_landmarks:
+                    x_coord_landmarks = []
+                    y_coord_landmarks = []
+                    for hand_landmarks in results.multi_hand_landmarks:
+                        mp_drawing.draw_landmarks(
+                            img_from_cam,
+                            hand_landmarks,
+                            mp_hands.HAND_CONNECTIONS,
+                            mp_drawing_styles.get_default_hand_landmarks_style(),
+                            mp_drawing_styles.get_default_hand_connections_style(),
+                        )
+                        for landmark in hand_landmarks.landmark:
+                            x_coord_landmarks.append(landmark.x)
+                            y_coord_landmarks.append(landmark.y)
 
-        img_rgb = cv2.cvtColor(imgFromCam, cv2.COLOR_BGR2RGB)
+                    landmarks = []
+                    if x_coord_landmarks and y_coord_landmarks:
+                        min_x = min(x_coord_landmarks)
+                        min_y = min(y_coord_landmarks)
+                        for hand_landmarks in results.multi_hand_landmarks:
+                            for landmark in hand_landmarks.landmark:
+                                landmarks.append(landmark.x - min_x)
+                                landmarks.append(landmark.y - min_y)
 
-        results = hands.process(img_rgb)
-        if results.multi_hand_landmarks:
-            for hand_landmarks in results.multi_hand_landmarks:
-                mp_drawing.draw_landmarks(
-                    imgFromCam,  # image to draw
-                    hand_landmarks,  # model output
-                    mp_hands.HAND_CONNECTIONS,  # hand connections
-                    mp_drawing_styles.get_default_hand_landmarks_style(),
-                    mp_drawing_styles.get_default_hand_connections_style()
-                )
+                    if landmarks:
+                        prediction = model.predict([np.asarray(landmarks)])
+                        predicted_character = labels_dict.get(int(prediction[0]), "Unknown")
 
-            landmarks=[]
-            for hand_landmarks in results.multi_hand_landmarks:
-                for i in range(len(hand_landmarks.landmark)):
-                    x = hand_landmarks.landmark[i].x
-                    y = hand_landmarks.landmark[i].y
+                        margin = 10
+                        x1 = max(int(min_x * width) - margin, 0)
+                        y1 = max(int(min_y * height) - margin, 0)
+                        x2 = min(int(max(x_coord_landmarks) * width) + margin, width - 1)
+                        y2 = min(int(max(y_coord_landmarks) * height) + margin, height - 1)
 
-                    xCoordLandmarks.append(x)
-                    yCoordLandmarks.append(y)
+                        cv2.rectangle(img_from_cam, (x1, y1), (x2, y2), (0, 0, 0), 4)
+                        cv2.putText(
+                            img_from_cam,
+                            predicted_character,
+                            (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            1.3,
+                            (0, 0, 0),
+                            3,
+                            cv2.LINE_AA,
+                        )
 
-                for i in range(len(hand_landmarks.landmark)):
-                    x = hand_landmarks.landmark[i].x
-                    y = hand_landmarks.landmark[i].y
-                    landmarks.append(x - min(xCoordLandmarks))
-                    landmarks.append(y - min(yCoordLandmarks))
-
-            x1 = int(min(xCoordLandmarks) * W) - 10
-            y1 = int(min(yCoordLandmarks) * H) - 10
-
-            x2 = int(max(xCoordLandmarks) * W) - 10
-            y2 = int(max(yCoordLandmarks) * H) - 10
-            prediction=""
-            prediction = model.predict([np.asarray(landmarks)])
-            if(prediction==None):
-                predicted_character="Not Found"
-            else:
-                predicted_character = labels_dict[int(prediction[0])]
-            cv2.rectangle(imgFromCam, (x1, y1), (x2, y2), (0, 0, 0), 4)
-            cv2.putText(imgFromCam, predicted_character, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 0, 0), 3,
-                        cv2.LINE_AA)
-    except:
-        pass
-    cv2.imshow('frame', imgFromCam)
-    key=cv2.waitKey(1)
-    if key==ord('q'):
-        break
+                cv2.imshow("frame", img_from_cam)
+                key = cv2.waitKey(1)
+                if key == ord("q"):
+                    break
+    finally:
+        camera.release()
+        cv2.destroyAllWindows()
 
 
-camera.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    main()

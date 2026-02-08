@@ -62,10 +62,7 @@ def main() -> None:
                 img_rgb = cv2.cvtColor(img_from_cam, cv2.COLOR_BGR2RGB)
                 results = hands.process(img_rgb)
 
-                predicted_character = "Unknown"
                 if results.multi_hand_landmarks:
-                    x_coord_landmarks = []
-                    y_coord_landmarks = []
                     for hand_landmarks in results.multi_hand_landmarks:
                         mp_drawing.draw_landmarks(
                             img_from_cam,
@@ -74,20 +71,25 @@ def main() -> None:
                             mp_drawing_styles.get_default_hand_landmarks_style(),
                             mp_drawing_styles.get_default_hand_connections_style(),
                         )
+                        x_coord_landmarks = []
+                        y_coord_landmarks = []
                         for landmark in hand_landmarks.landmark:
                             x_coord_landmarks.append(landmark.x)
                             y_coord_landmarks.append(landmark.y)
 
-                    landmarks = []
-                    if x_coord_landmarks and y_coord_landmarks:
+                        if not x_coord_landmarks or not y_coord_landmarks:
+                            continue
+
                         min_x = min(x_coord_landmarks)
                         min_y = min(y_coord_landmarks)
-                        for hand_landmarks in results.multi_hand_landmarks:
-                            for landmark in hand_landmarks.landmark:
-                                landmarks.append(landmark.x - min_x)
-                                landmarks.append(landmark.y - min_y)
+                        landmarks = []
+                        for landmark in hand_landmarks.landmark:
+                            landmarks.append(landmark.x - min_x)
+                            landmarks.append(landmark.y - min_y)
 
-                    if landmarks:
+                        if not landmarks:
+                            continue
+
                         prediction = model.predict([np.asarray(landmarks)])
                         predicted_character = labels_dict.get(int(prediction[0]), "Unknown")
 

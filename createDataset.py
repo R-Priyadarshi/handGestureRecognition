@@ -51,23 +51,23 @@ def main() -> None:
                     logging.warning("No hand landmarks detected for %s", img_path)
                     continue
 
-                rel_pos_landmarks = []
-                x_coord_landmarks = []
-                y_coord_landmarks = []
                 for hand_landmarks in results.multi_hand_landmarks:
+                    rel_pos_landmarks = []
+                    x_coord_landmarks = []
+                    y_coord_landmarks = []
                     for landmark in hand_landmarks.landmark:
                         x_coord_landmarks.append(landmark.x)
                         y_coord_landmarks.append(landmark.y)
-                min_x = min(x_coord_landmarks)
-                min_y = min(y_coord_landmarks)
-                for hand_landmarks in results.multi_hand_landmarks:
+
+                    min_x = min(x_coord_landmarks)
+                    min_y = min(y_coord_landmarks)
                     for landmark in hand_landmarks.landmark:
                         rel_pos_landmarks.append(landmark.x - min_x)
                         rel_pos_landmarks.append(landmark.y - min_y)
 
-                if rel_pos_landmarks:
-                    data.append(rel_pos_landmarks)
-                    labels.append(label_dir.name)
+                    if rel_pos_landmarks:
+                        data.append(rel_pos_landmarks)
+                        labels.append(label_dir.name)
 
     if not data:
         raise ValueError("No hand landmark samples were created. Check the training data.")

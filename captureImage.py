@@ -56,6 +56,7 @@ def main() -> None:
                 if key == ord("q"):
                     break
                 if key == ord("w"):
+                    logging.info("Capture aborted by user.")
                     return
 
             cv2.destroyAllWindows()

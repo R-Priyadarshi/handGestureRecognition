@@ -1,0 +1,109 @@
+[build-system]
+requires = ["setuptools>=65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hand-gesture-platform"
+version = "2.0.0"
+description = "Production-grade multi-platform hand-gesture intelligence platform"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+authors = [
+    {name = "R-Priyadarshi"}
+]
+keywords = ["hand-gesture", "computer-vision", "mediapipe", "pytorch", "onnx", "machine-learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "numpy>=1.21.0",
+    "opencv-python>=4.5.0",
+    "mediapipe>=0.10.0",
+    "torch>=2.0.0",
+    "torchvision>=0.15.0",
+    "onnx>=1.14.0",
+    "onnxruntime>=1.15.0",
+    "pyyaml>=6.0",
+    "tqdm>=4.65.0",
+    "pillow>=9.0.0",
+]
+
+[project.optional-dependencies]
+training = [
+    "mlflow>=2.8.0",
+    "tensorboard>=2.13.0",
+    "scikit-learn>=1.3.0",
+    "pandas>=2.0.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+]
+
+mlops = [
+    "dvc>=3.0.0",
+    "dvc-gdrive>=2.0.0",
+]
+
+export = [
+    "tf2onnx>=1.15.0",
+    "onnx-simplifier>=0.4.0",
+]
+
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "hypothesis>=6.82.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+    "flake8>=6.1.0",
+    "mypy>=1.4.0",
+    "pre-commit>=3.3.0",
+]
+
+web = [
+    "flask>=2.3.0",
+    "flask-cors>=4.0.0",
+]
+
+all = [
+    "hand-gesture-platform[training,mlops,export,dev,web]",
+]
+
+[project.urls]
+Homepage = "https://github.com/R-Priyadarshi/handGestureRecognition"
+Repository = "https://github.com/R-Priyadarshi/handGestureRecognition"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+packages = ["core", "training", "apps"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39', 'py310', 'py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=core --cov=training --cov-report=html --cov-report=term"
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true

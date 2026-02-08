@@ -1,7 +1,7 @@
 import os
 import cv2
 
-rootDirectory = 'Testing'
+rootDirectory = 'TrainingData'
 if not os.path.exists(rootDirectory):
     os.makedirs(rootDirectory)
 

@@ -1,0 +1,42 @@
+# Training Configuration
+
+# Experiment settings
+experiment_name: "hand_gesture_recognition"
+output_dir: "models"
+
+# Data settings
+data:
+  root_dir: "TrainingData"  # Directory containing class subdirectories
+  use_3d: false  # Use 2D (x,y) landmarks for better performance
+  train_split: 0.8
+  num_workers: 4
+
+# Model settings
+model:
+  type: "lightweight"  # Options: "lightweight", "transformer"
+  input_dim: 42  # 21 landmarks * 2 (x, y)
+  num_classes: 26  # A-Z gestures
+  
+  # Lightweight model settings
+  hidden_dims: [128, 256, 128]
+  dropout: 0.2
+  
+  # Transformer model settings (if type is "transformer")
+  # d_model: 128
+  # nhead: 8
+  # num_layers: 4
+  # dim_feedforward: 512
+
+# Training settings
+training:
+  num_epochs: 100
+  batch_size: 32
+  learning_rate: 0.001
+  weight_decay: 0.01
+  use_amp: false  # Automatic mixed precision (requires CUDA)
+  gradient_clip: 1.0
+  early_stopping_patience: 15
+
+# Evaluation settings
+evaluation:
+  batch_size: 64

@@ -59,9 +59,8 @@ models/
 mlruns/
 .dvc/cache/
 
-# Data
+# Data directories (but not code)
 data/
-datasets/
 *.jpg
 *.png
 *.jpeg

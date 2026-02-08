@@ -28,4 +28,4 @@ elif not MODEL_PATH.exists():
 else:
     next_step = "Run test.py to start live hand-gesture recognition."
 
-print(f"Recommended next step:\n{next_step}")
+print(f"What to do next:\n{next_step}")

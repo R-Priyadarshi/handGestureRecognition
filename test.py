@@ -70,7 +70,7 @@ while True:
                         cv2.LINE_AA)
     except:
         pass
-    cv2.imshow('frame', imgFromCam)
+    cv2.imshow('GestureSphere - Hand Gesture Recognition', imgFromCam)
     key=cv2.waitKey(1)
     if key==ord('q'):
         break

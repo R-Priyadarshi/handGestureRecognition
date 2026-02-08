@@ -35,6 +35,15 @@ python train.py
 python test.py
 ```
 
+## Next immediate step
+Capture a small, representative training set (good lighting, consistent background, diverse hands) in `TrainingData/`, then rebuild the dataset and retrain the model:
+```bash
+python captureImage.py --output-dir TrainingData
+python createDataset.py --input-dir TrainingData
+python train.py
+```
+This produces a fresh `dataset.pickle` and `model.pickle` to validate live inference quality before scaling up data collection.
+
 ## Data layout
 ```
 TrainingData/

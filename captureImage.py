@@ -1,45 +1,81 @@
-import os
+import argparse
+import logging
+from pathlib import Path
+
 import cv2
 
-rootDirectory = 'Testing'
-if not os.path.exists(rootDirectory):
-    os.makedirs(rootDirectory)
 
-noOfLettersToTrain = 26
-noOfImagesPerLetter = 100
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Capture images for hand gesture training.")
+    parser.add_argument("--output-dir", default="Testing", help="Directory to store captured images.")
+    parser.add_argument("--labels", type=int, default=26, help="Number of labels to capture (A-Z = 26).")
+    parser.add_argument("--images-per-label", type=int, default=100, help="Images to capture per label.")
+    parser.add_argument("--camera-index", type=int, default=0, help="Camera index to use.")
+    parser.add_argument("--width", type=int, default=1280, help="Camera frame width.")
+    parser.add_argument("--height", type=int, default=640, help="Camera frame height.")
+    return parser.parse_args()
 
-camera = cv2.VideoCapture(0)
-camera.set(3,1280)
-camera.set(4,640)
-for label in range(noOfLettersToTrain):
-    if not os.path.exists(os.path.join(rootDirectory, str(label))):
-        os.makedirs(os.path.join(rootDirectory, str(label)))
 
-    print(f"Collecting Images for {chr(label+65)}")
-    while True:
-        success, imgFromCam = camera.read()
-        cv2.putText(imgFromCam, f'Press "Q" to collect images for {chr(label+65)} ! :)', (100, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (150, 255, 0), 2,
-                    cv2.LINE_AA)
-        cv2.imshow('Are you Ready ?',imgFromCam )
-        cv2.moveWindow('Are you Ready ?',350,100)
-        key=cv2.waitKey(25)
-        if key == ord('q'):
-            break
-        if key == ord('w'):
-            camera.release()
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+    args = parse_args()
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    camera = cv2.VideoCapture(args.camera_index)
+    if not camera.isOpened():
+        raise RuntimeError(f"Unable to open camera index {args.camera_index}.")
+
+    camera.set(3, args.width)
+    camera.set(4, args.height)
+
+    try:
+        for label in range(args.labels):
+            label_dir = output_dir / str(label)
+            label_dir.mkdir(parents=True, exist_ok=True)
+
+            logging.info("Collecting images for %s", chr(label + 65))
+            while True:
+                success, img_from_cam = camera.read()
+                if not success:
+                    logging.warning("Failed to read from camera. Retrying...")
+                    continue
+                cv2.putText(
+                    img_from_cam,
+                    f'Press "Q" to collect images for {chr(label + 65)} ! :)',
+                    (100, 50),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.7,
+                    (150, 255, 0),
+                    2,
+                    cv2.LINE_AA,
+                )
+                cv2.imshow("Are you Ready ?", img_from_cam)
+                cv2.moveWindow("Are you Ready ?", 350, 100)
+                key = cv2.waitKey(25)
+                if key == ord("q"):
+                    break
+                if key == ord("w"):
+                    logging.info("Capture aborted by user.")
+                    return
+
             cv2.destroyAllWindows()
-            exit(0)
+            counter = 0
+            while counter < args.images_per_label:
+                success, img_from_cam = camera.read()
+                if not success:
+                    logging.warning("Failed to read from camera. Retrying...")
+                    continue
+                cv2.imshow(f"Capturing Images for {chr(label + 65)}", img_from_cam)
+                cv2.moveWindow(f"Capturing Images for {chr(label + 65)}", 350, 100)
+                cv2.waitKey(25)
+                cv2.imwrite(str(label_dir / f"{counter}.jpg"), img_from_cam)
+                counter += 1
+            cv2.destroyAllWindows()
+    finally:
+        camera.release()
+        cv2.destroyAllWindows()
 
-    cv2.destroyAllWindows()
-    counter = 0
-    while counter < noOfImagesPerLetter:
-        success, imgFromCam = camera.read()
-        cv2.imshow(f'Capturing Images for {chr(label+65)}', imgFromCam)
-        cv2.moveWindow(f'Capturing Images for {chr(label+65)}',350,100)
-        cv2.waitKey(25)
-        cv2.imwrite(os.path.join(rootDirectory, str(label), f'{counter}.jpg'), imgFromCam)
-        counter += 1
-    cv2.destroyAllWindows()
 
-camera.release()
-cv2.destroyAllWindows()
+if __name__ == "__main__":
+    main()
